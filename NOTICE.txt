@@ -1,0 +1,12 @@
+AddIDETool
+Version 1.00
+
+Copyright (c) 2021 - 2021 Markus Humm (markus [dot] humm [at] googlemail [dot] com) (main contact)
+
+This software is licensed to you under the Apache License 2.0.
+A copy of the license text can be found in the LICENSE.txt file in this project or
+alternatively at http://www.apache.org/licenses/LICENSE-2.0
+
+The AddIDETool team wishes to thank the following other people for their contributions:
+
+- None yet, why don't you become the first one?
