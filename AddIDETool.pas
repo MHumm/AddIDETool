@@ -138,6 +138,16 @@ type
     ///   given IDE version
     /// </returns>
     function IsInMenu(const Path, IDEVersion: string):Boolean;
+    /// <summary>
+    ///   Determines the "display name" of a BDS version
+    /// </summary>
+    /// <param name="IDEVersion">
+    ///   IDE Version number as returned by GetIDEVersionList
+    /// </param>
+    /// <returns>
+    ///   Display name for that version of if it is not known and empty string
+    /// </returns>
+    function GetIDEVersionName(IDEVersion: string):string;
   end;
 
 implementation
@@ -242,6 +252,53 @@ begin
       FRegistry.CloseKey;
     end;
   end;
+end;
+
+function TAddIDETool.GetIDEVersionName(IDEVersion: string): string;
+begin
+  Result := '';
+
+  if (IDEVersion = '22.0') then
+    Exit('11.0 Alexandria');
+
+  if (IDEVersion = '21.0') then
+    Exit('10.4 Sydney');
+  if (IDEVersion = '20.0') then
+    Exit('10.3 Rio');
+  if (IDEVersion = '19.0') then
+    Exit('10.2 Tokyo');
+  if (IDEVersion = '18.0') then
+    Exit('10.1 Berlin');
+  if (IDEVersion = '17.0') then
+    Exit('10.0 Seattle');
+  if (IDEVersion = '16.0') then
+    Exit('XE8');
+  if (IDEVersion = '15.0') then
+    Exit('XE7');
+  if (IDEVersion = '14.0') then
+    Exit('XE6');
+  if (IDEVersion = '12.0') then
+    Exit('XE5');
+  if (IDEVersion = '11.0') then
+    Exit('XE4');
+  if (IDEVersion = '10.0') then
+    Exit('XE3');
+  if (IDEVersion = '9.0') then
+    Exit('XE2');
+  if (IDEVersion = '8.0') then
+    Exit('XE');
+  if (IDEVersion = '7.0') then
+    Exit('2010');
+  if (IDEVersion = '6.0') then
+    Exit('2009');
+  if (IDEVersion = '5.0') then
+    Exit('2007');
+  if (IDEVersion = '4.0') then
+    Exit('2006');
+  if (IDEVersion = '3.0') then
+    Exit('2005');
+  if (IDEVersion = '2.0') then
+    Exit('8.0 for .net');
 end;
 
 function TAddIDETool.GetIDEVersionsList: TStringList;
