@@ -106,11 +106,6 @@ type
     ///   Registry key name of the tools menu entries for the processed IDE version
     /// </param>
     procedure DoAddModifyTool(const Params, Path, Title, WorkingDir, RegPath: string);
-    /// <summary>
-    ///   Determines the Rad Studio root key which contains the subnodes for
-    ///   all versions
-    /// </summary>
-    function GetIDERootKey:string;
   public
     /// <summary>
     ///   Initialize internal fields
@@ -304,36 +299,74 @@ begin
   end;
 end;
 
-function TAddIDETool.GetIDERootKey: string;
-begin
-  Result := IDERootKey + FBDSKeyName;
-end;
-
 function TAddIDETool.GetIDEVersionsList: TIDEVersionList;
 var
-  Keys    : TStringList;
-  s       : string;
-  Version : TIDEVersionRec;
+  ConfigKeys  : TStringList;
+  VersionKeys : TStringList;
+  Keys        : TStringList;
+  ConfigKey   : string;
+  VersionKey  : string;
+  d           : Double;
+  Version     : TIDEVersionRec;
 begin
   Result := TIDEVersionList.Create;
 
-  if FRegistry.OpenKey(GetIDERootKey, false) then
+  if FRegistry.OpenKey(IDERootKey, false) then
   begin
     try
-      Keys := TStringList.Create;
+      // fetch the list of all subkeys of the Embarcadero one
+      ConfigKeys := TStringList.Create;
       try
-        FRegistry.GetKeyNames(Keys);
+        FRegistry.GetKeyNames(ConfigKeys);
+        FRegistry.CloseKey;
 
-        for s in Keys do
+        for ConfigKey in ConfigKeys do
         begin
-          Version.ConfigRootKey := FBDSKeyName;
-          Version.BDSVersion    := s;
-          Result.Add(Version);
+          // fetch all potential version keys below that config key
+          if FRegistry.OpenKey(IDERootKey + ConfigKey, false) then
+          begin
+            VersionKeys := TStringList.Create;
+
+            try
+              FRegistry.GetKeyNames(VersionKeys);
+              FRegistry.CloseKey;
+
+              for VersionKey in VersionKeys do
+              begin
+                // if s is a valid floating point number the key is a BDS version
+                // else we skip it
+                if not System.SysUtils.TryStrToFloat(VersionKey, d, TFormatSettings.Create('en-US')) then
+                  Continue;
+
+                // we have a valid BDS version, but only if it contains a transfer key
+                if FRegistry.OpenKey(IDERootKey + ConfigKey + '\' + VersionKey, false) then
+                begin
+                  Keys := TStringList.Create;
+
+                  try
+                    FRegistry.GetKeyNames(Keys);
+                    FRegistry.CloseKey;
+
+                    if (Keys.IndexOf(ToolsKey) >= 0) then
+                    begin
+                      Version.ConfigRootKey := ConfigKey;
+                      Version.BDSVersion    := VersionKey;
+                      Result.Add(Version);
+                    end;
+                  finally
+                    Keys.Free;
+                  end;
+                end;
+              end;
+            finally
+              VersionKeys.Free;
+            end;
+          end;
         end;
       finally
-        Keys.Free;
+        ConfigKeys.Free;
       end;
-      FRegistry.CloseKey;
+
     except
       On e:exception do
         OutputDebugString(PWideChar('Failure retrieving all installed IDE '+
