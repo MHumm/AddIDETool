@@ -33,7 +33,11 @@ type
     /// <summary>
     ///   Provides access to the Windows registry
     /// </summary>
-    FRegistry : TRegistry;
+    FRegistry   : TRegistry;
+    /// <summary>
+    ///   Key name for the Rad Studio subkeys under the Embarcadero node
+    /// </summary>
+    FBDSKeyName : string;
 
     /// <summary>
     ///   Search if a certain tool path is already listed under tools and if yes
@@ -70,6 +74,11 @@ type
     ///   Registry key name of the tools menu entries for the processed IDE version
     /// </param>
     procedure DoAddModifyTool(const Params, Path, Title, WorkingDir, RegPath: string);
+    /// <summary>
+    ///   Determines the Rad Studio root key which contains the subnodes for
+    ///   all versions
+    /// </summary>
+    function GetIDERootKey:string;
   public
     /// <summary>
     ///   Initialize internal fields
@@ -148,12 +157,30 @@ type
     ///   Display name for that version of if it is not known and empty string
     /// </returns>
     function GetIDEVersionName(IDEVersion: string):string;
+
+    /// <summary>
+    ///   Name of the key under the Embarcadero key under which all Rad Studio
+    ///   versions are stored in the registry
+    /// </summary>
+    property RadStudioKeyName : string
+      read   FBDSKeyName
+      write  FBDSKEyName;
   end;
 
 implementation
 
 const
-  IDERootKey       = 'SOFTWARE\Embarcadero\BDS';
+  /// <summary>
+  ///   Root path for EMBT products
+  /// </summary>
+  IDERootKey       = 'SOFTWARE\Embarcadero\';
+  /// <summary>
+  ///   Default root key for Rad Studio
+  /// </summary>
+  DefaultBDSName   = 'BDS';
+  /// <summary>
+  ///   Tools subkey
+  /// </summary>
   ToolsKey         = 'Transfer';
 
 { TAddIDETool }
@@ -175,7 +202,7 @@ begin
     if (StrToFloat(IDEVersion, TFormatSettings.Create('en-US'))  >= 6.0) then
     begin
       // if registry path to the tools menu list exists
-      RegPath := IDERootKey + '\' + IDEVersion + '\' + ToolsKey;
+      RegPath := GetIDERootKey + '\' + IDEVersion + '\' + ToolsKey;
       if FRegistry.OpenKey(RegPath, false) then
       begin
         FRegistry.CloseKey;
@@ -200,6 +227,7 @@ begin
 
   FRegistry         := TRegistry.Create;
   FRegistry.RootKey := HKEY_CURRENT_USER;
+  FBDSKeyName          := DefaultBDSName;
 end;
 
 procedure TAddIDETool.DeleteTool(const Path: string; IDEVersions: TStringList);
@@ -217,7 +245,7 @@ begin
     if (StrToFloat(IDEVersion, TFormatSettings.Create('en-US'))  >= 6.0) then
     begin
       // if registry path to the tools menu list exists
-      RegPath := IDERootKey + '\' + IDEVersion + '\' + ToolsKey;
+      RegPath := GetIDERootKey + '\' + IDEVersion + '\' + ToolsKey;
       if FRegistry.OpenKey(RegPath, false) then
       begin
         FRegistry.CloseKey;
@@ -252,6 +280,11 @@ begin
       FRegistry.CloseKey;
     end;
   end;
+end;
+
+function TAddIDETool.GetIDERootKey: string;
+begin
+  Result := IDERootKey + FBDSKeyName;
 end;
 
 function TAddIDETool.GetIDEVersionName(IDEVersion: string): string;
@@ -305,7 +338,7 @@ function TAddIDETool.GetIDEVersionsList: TStringList;
 begin
   Result := TStringList.Create;
 
-  if FRegistry.OpenKey(IDERootKey, false) then
+  if FRegistry.OpenKey(GetIDERootKey, false) then
   begin
     try
       FRegistry.GetKeyNames(Result);
@@ -320,7 +353,7 @@ end;
 
 function TAddIDETool.IsInMenu(const Path, IDEVersion: string): Boolean;
 begin
-  Result := SearchForToolsPath(Path, IDERootKey+'\'+IDEVersion+'\'+ToolsKey) <> '';
+  Result := SearchForToolsPath(Path, GetIDERootKey+'\'+IDEVersion+'\'+ToolsKey) <> '';
 end;
 
 function TAddIDETool.SearchForToolsPath(Path: string;
