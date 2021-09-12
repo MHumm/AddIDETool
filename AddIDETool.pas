@@ -22,9 +22,41 @@ uses
   System.SysUtils,
   System.Win.Registry,
   System.Classes,
+  Generics.Collections,
   Winapi.Windows;
 
 type
+  /// <summary>
+  ///   Single entry for the IDE configuration/version list
+  /// </summary>
+  TIDEVersionRec = record
+    /// <summary>
+    ///   Either 'BDS' or one specified via -r command line parameter
+    /// </summary>
+    ConfigRootKey : string;
+    /// <summary>
+    ///   BDS version number
+    /// </summary>
+    BDSVersion    : string;
+
+    /// <summary>
+    ///   Returns the full registry key for the configuration
+    /// </summary>
+    function GetConfigKey: string;
+    /// <summary>
+    ///   Determines the "display name" of a BDS version
+    /// </summary>
+    /// <returns>
+    ///   Display name for that version of if it is not known and empty string
+    /// </returns>
+    function GetIDEVersionName: string;
+  end;
+
+  /// <summary>
+  ///   List of IDE configurations/versions
+  /// </summary>
+  TIDEVersionList = TList<TIDEVersionRec>;
+
   /// <summary>
   ///   Class for adding something to or deleteing from the IDE's tools menu.
   /// </summary>
@@ -93,10 +125,10 @@ type
     ///   Returns a list of all installed IDE versions
     /// </summary>
     /// <returns>
-    ///   List of all installed IDE versions. The list is always created even if
-    ///   no IDE is installed.
+    ///   List of all installed IDE versions and configurations.
+    ///   The list is always created even if no IDE is installed.
     /// </returns>
-    function GetIDEVersionsList: TStringList;
+    function GetIDEVersionsList: TIDEVersionList;
     /// <summary>
     ///   Adds a tool to the tools menu of selected Rad Studio IDEs
     /// </summary>
@@ -112,51 +144,41 @@ type
     /// <param name="WorkingDir">
     ///   Path which the IDE sets as working dir before calling the tool
     /// </param>
-    /// <param name="IDEVersions">
-    ///   List of IDE versions the tool shall get added to. If the list contains
-    ///   versions not installed they will be ignored. Best is to call
-    ///   GetIDEVersionsList and pass that one.
+    /// <param name="ConfigKeys">
+    ///   List of IDE versions/configurations the tool shall get added to.
+    ///   If the list contains versions not installed they will be ignored.
+    ///   Best is to call GetIDEVersionsList and pass that one.
     /// </param>
     procedure AddTool(const Params, Path, Title, WorkingDir: string;
-                      IDEVersions: TStringList);
+                      ConfigKeys: TIDEVersionList);
     /// <summary>
     ///   Remove a tools menu entry for a given tool
     /// </summary>
     /// <param name="Path">
     ///   Path and file name of the tool to remove, it will be referenced by that
     /// </param>
-    /// <param name="IDEVersions">
+    /// <param name="ConfigKeys">
     ///   List of IDE versions the tool shall get deleted from. If the list contains
     ///   versions not installed they will be ignored. Best is to call
     ///   GetIDEVersionsList and pass that one.
     /// </param>
-    procedure DeleteTool(const Path: string; IDEVersions: TStringList);
+    procedure DeleteTool(const Path: string; ConfigKeys: TIDEVersionList);
 
     /// <summary>
     ///   Checks whether a certain application is listed in the tools menu of
-    ///   a certain IDE version
+    ///   a certain IDE version and configuration
     /// </summary>
     /// <param name="Path">
     ///   Path and file name of the tool to look for
     /// </param>
-    /// <param name="IDEVersion">
-    ///   IDE version to check, as returned by GetIDEVersionList
+    /// <param name="ConfigKey">
+    ///   Complete registry key for a configuration and version combination
     /// </param>
     /// <returns>
     ///   true if a tool with that path is listed under Tools menu for the
-    ///   given IDE version
+    ///   given IDE version/configuration
     /// </returns>
-    function IsInMenu(const Path, IDEVersion: string):Boolean;
-    /// <summary>
-    ///   Determines the "display name" of a BDS version
-    /// </summary>
-    /// <param name="IDEVersion">
-    ///   IDE Version number as returned by GetIDEVersionList
-    /// </param>
-    /// <returns>
-    ///   Display name for that version of if it is not known and empty string
-    /// </returns>
-    function GetIDEVersionName(IDEVersion: string):string;
+    function IsInMenu(const Path, ConfigKey: string):Boolean;
 
     /// <summary>
     ///   Name of the key under the Embarcadero key under which all Rad Studio
@@ -186,23 +208,23 @@ const
 { TAddIDETool }
 
 procedure TAddIDETool.AddTool(const Params, Path, Title, WorkingDir: string;
-  IDEVersions: TStringList);
+  ConfigKeys: TIDEVersionList);
 var
-  IDEVersion      : string;
+  IDEVersion      : TIDEVersionRec;
   ExistingRegPath : string;
   RegPath         : string;
 begin
-  Assert(Assigned(IDEVersions), 'Not created list of IDE versions has been passed');
+  Assert(Assigned(ConfigKeys), 'Not created list of IDE versions has been passed');
   Assert(Path <> '', 'Empty path/file name has been specified');
   Assert(Title <> '', 'Empty title has been specified');
 
-  for IDEVersion in IDEVersions do
+  for IDEVersion in ConfigKeys do
   begin
     // Skip versions older than D2009
-    if (StrToFloat(IDEVersion, TFormatSettings.Create('en-US'))  >= 6.0) then
+    if (StrToFloat(IDEVersion.BDSVersion, TFormatSettings.Create('en-US'))  >= 6.0) then
     begin
       // if registry path to the tools menu list exists
-      RegPath := GetIDERootKey + '\' + IDEVersion + '\' + ToolsKey;
+      RegPath := IDEVersion.GetConfigKey + '\' + ToolsKey;
       if FRegistry.OpenKey(RegPath, false) then
       begin
         FRegistry.CloseKey;
@@ -227,25 +249,25 @@ begin
 
   FRegistry         := TRegistry.Create;
   FRegistry.RootKey := HKEY_CURRENT_USER;
-  FBDSKeyName          := DefaultBDSName;
+  FBDSKeyName       := DefaultBDSName;
 end;
 
-procedure TAddIDETool.DeleteTool(const Path: string; IDEVersions: TStringList);
+procedure TAddIDETool.DeleteTool(const Path: string; ConfigKeys: TIDEVersionList);
 var
-  IDEVersion      : string;
+  IDEVersion      : TIDEVersionRec;
   ExistingRegPath : string;
   RegPath         : string;
 begin
-  Assert(Assigned(IDEVersions), 'Not created list of IDE versions has been passed');
+  Assert(Assigned(ConfigKeys), 'Not created list of IDE versions has been passed');
   Assert(Path <> '', 'Empty path/file name has been specified');
 
-  for IDEVersion in IDEVersions do
+  for IDEVersion in ConfigKeys do
   begin
     // Skip versions older than D2009
-    if (StrToFloat(IDEVersion, TFormatSettings.Create('en-US'))  >= 6.0) then
+    if (StrToFloat(IDEVersion.BDSVersion, TFormatSettings.Create('en-US'))  >= 6.0) then
     begin
       // if registry path to the tools menu list exists
-      RegPath := GetIDERootKey + '\' + IDEVersion + '\' + ToolsKey;
+      RegPath := IDEVersion.GetConfigKey + '\' + ToolsKey;
       if FRegistry.OpenKey(RegPath, false) then
       begin
         FRegistry.CloseKey;
@@ -287,61 +309,30 @@ begin
   Result := IDERootKey + FBDSKeyName;
 end;
 
-function TAddIDETool.GetIDEVersionName(IDEVersion: string): string;
+function TAddIDETool.GetIDEVersionsList: TIDEVersionList;
+var
+  Keys    : TStringList;
+  s       : string;
+  Version : TIDEVersionRec;
 begin
-  Result := '';
-
-  if (IDEVersion = '22.0') then
-    Exit('11.0 Alexandria');
-
-  if (IDEVersion = '21.0') then
-    Exit('10.4 Sydney');
-  if (IDEVersion = '20.0') then
-    Exit('10.3 Rio');
-  if (IDEVersion = '19.0') then
-    Exit('10.2 Tokyo');
-  if (IDEVersion = '18.0') then
-    Exit('10.1 Berlin');
-  if (IDEVersion = '17.0') then
-    Exit('10.0 Seattle');
-  if (IDEVersion = '16.0') then
-    Exit('XE8');
-  if (IDEVersion = '15.0') then
-    Exit('XE7');
-  if (IDEVersion = '14.0') then
-    Exit('XE6');
-  if (IDEVersion = '12.0') then
-    Exit('XE5');
-  if (IDEVersion = '11.0') then
-    Exit('XE4');
-  if (IDEVersion = '10.0') then
-    Exit('XE3');
-  if (IDEVersion = '9.0') then
-    Exit('XE2');
-  if (IDEVersion = '8.0') then
-    Exit('XE');
-  if (IDEVersion = '7.0') then
-    Exit('2010');
-  if (IDEVersion = '6.0') then
-    Exit('2009');
-  if (IDEVersion = '5.0') then
-    Exit('2007');
-  if (IDEVersion = '4.0') then
-    Exit('2006');
-  if (IDEVersion = '3.0') then
-    Exit('2005');
-  if (IDEVersion = '2.0') then
-    Exit('8.0 for .net');
-end;
-
-function TAddIDETool.GetIDEVersionsList: TStringList;
-begin
-  Result := TStringList.Create;
+  Result := TIDEVersionList.Create;
 
   if FRegistry.OpenKey(GetIDERootKey, false) then
   begin
     try
-      FRegistry.GetKeyNames(Result);
+      Keys := TStringList.Create;
+      try
+        FRegistry.GetKeyNames(Keys);
+
+        for s in Keys do
+        begin
+          Version.ConfigRootKey := FBDSKeyName;
+          Version.BDSVersion    := s;
+          Result.Add(Version);
+        end;
+      finally
+        Keys.Free;
+      end;
       FRegistry.CloseKey;
     except
       On e:exception do
@@ -351,9 +342,9 @@ begin
   end;
 end;
 
-function TAddIDETool.IsInMenu(const Path, IDEVersion: string): Boolean;
+function TAddIDETool.IsInMenu(const Path, ConfigKey: string): Boolean;
 begin
-  Result := SearchForToolsPath(Path, GetIDERootKey+'\'+IDEVersion+'\'+ToolsKey) <> '';
+  Result := SearchForToolsPath(Path, ConfigKey+'\'+ToolsKey) <> '';
 end;
 
 function TAddIDETool.SearchForToolsPath(Path: string;
@@ -397,6 +388,60 @@ begin
     ToolsKeys.Free;
     Registry.Free;
   end;
+end;
+
+{ TIDEVersionRec }
+
+function TIDEVersionRec.GetConfigKey: string;
+begin
+  Result := IDERootKey + ConfigRootKey + '\' + BDSVersion;
+end;
+
+function TIDEVersionRec.GetIDEVersionName: string;
+begin
+  Result := '';
+
+  if (BDSVersion = '22.0') then
+    Exit('11.0 Alexandria');
+
+  if (BDSVersion = '21.0') then
+    Exit('10.4 Sydney');
+  if (BDSVersion = '20.0') then
+    Exit('10.3 Rio');
+  if (BDSVersion = '19.0') then
+    Exit('10.2 Tokyo');
+  if (BDSVersion = '18.0') then
+    Exit('10.1 Berlin');
+  if (BDSVersion = '17.0') then
+    Exit('10.0 Seattle');
+  if (BDSVersion = '16.0') then
+    Exit('XE8');
+  if (BDSVersion = '15.0') then
+    Exit('XE7');
+  if (BDSVersion = '14.0') then
+    Exit('XE6');
+  if (BDSVersion = '12.0') then
+    Exit('XE5');
+  if (BDSVersion = '11.0') then
+    Exit('XE4');
+  if (BDSVersion = '10.0') then
+    Exit('XE3');
+  if (BDSVersion = '9.0') then
+    Exit('XE2');
+  if (BDSVersion = '8.0') then
+    Exit('XE');
+  if (BDSVersion = '7.0') then
+    Exit('2010');
+  if (BDSVersion = '6.0') then
+    Exit('2009');
+  if (BDSVersion = '5.0') then
+    Exit('2007');
+  if (BDSVersion = '4.0') then
+    Exit('2006');
+  if (BDSVersion = '3.0') then
+    Exit('2005');
+  if (BDSVersion = '2.0') then
+    Exit('8.0 for .net');
 end;
 
 end.

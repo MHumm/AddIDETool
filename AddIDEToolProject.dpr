@@ -29,7 +29,8 @@ uses
 
 var
   ToolAdder   : TAddIDETool;
-  IDEVersions : TStringList;
+  IDEVersions : TIDEVersionList;
+  Version     : TIDEVersionRec;
 
 begin
   try
@@ -37,8 +38,13 @@ begin
     try
       IDEVersions := ToolAdder.GetIDEVersionsList;
 
+      WriteLn('Found configurations:');
+
+      for Version in IDEVersions do
+        WriteLn(Version.GetConfigKey + ' (' + Version.GetIDEVersionName +')');
+
       if ToolAdder.IsInMenu('D:\Projekte\DECGitMaster\Compiled\BIN_IDExx.x_Win32__Demos\Hash_FMX.exe',
-                            IDEVersions[0]) then
+                            IDEVersions[0].GetConfigKey) then
         WriteLn('Is in tools')
       else
         WriteLn('Is not in tools');
