@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{9A096755-F96D-4177-B929-A4BE8F36B50B}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="AddIDEToolProject.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SelectConfigForm.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="AddIDEToolProject">
+        <MSBuild Projects="AddIDEToolProject.dproj"/>
+    </Target>
+    <Target Name="AddIDEToolProject:Clean">
+        <MSBuild Projects="AddIDEToolProject.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="AddIDEToolProject:Make">
+        <MSBuild Projects="AddIDEToolProject.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SelectConfigForm">
+        <MSBuild Projects="SelectConfigForm.dproj"/>
+    </Target>
+    <Target Name="SelectConfigForm:Clean">
+        <MSBuild Projects="SelectConfigForm.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SelectConfigForm:Make">
+        <MSBuild Projects="SelectConfigForm.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="AddIDEToolProject;SelectConfigForm"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="AddIDEToolProject:Clean;SelectConfigForm:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="AddIDEToolProject:Make;SelectConfigForm:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

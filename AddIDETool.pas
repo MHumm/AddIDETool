@@ -199,6 +199,14 @@ const
   ///   Tools subkey
   /// </summary>
   ToolsKey         = 'Transfer';
+  /// <summary>
+  ///   Separates the individual configurations in the string containing all of them
+  /// </summary>
+  ConfigSeparator  = '§';
+  /// <summary>
+  ///   Separates the individual parts of a configuraiton within the string
+  /// </summary>
+  PartSeperator    = '#';
 
 { TAddIDETool }
 

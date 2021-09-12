@@ -52,9 +52,9 @@ begin
 //      ToolAdder.DeleteTool('D:\Projekte\DECGitMaster\Compiled\BIN_IDExx.x_Win32__Demos\Hash_FMX.exe', IDEVersions);
 
       ToolAdder.AddTool('',
-                        'D:\Projekte\DECGitMaster\Compiled\BIN_IDExx.x_Win32__Demos\Hash_FMX.exe',
-                        'FMXHashDemo',
-                        'D:\Projekte\DECGitMaster\Compiled\BIN_IDExx.x_Win32__Demos',
+                        'D:\Projekte\AddIDETool\Win32\Debug\SelectConfigForm.exe',
+                        'AddIDEToolTest',
+                        'D:\Projekte\AddIDETool\Win32\Debug',
                         IDEVersions);
     finally
       ToolAdder.Free;
