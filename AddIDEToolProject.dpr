@@ -31,6 +31,8 @@ var
   ToolAdder   : TAddIDETool;
   IDEVersions : TIDEVersionList;
   Version     : TIDEVersionRec;
+  CurrentDir  : string;
+  Path        : string;
 
 begin
   try
@@ -43,19 +45,25 @@ begin
       for Version in IDEVersions do
         WriteLn(Version.GetConfigKey + ' (' + Version.GetIDEVersionName +')');
 
-      if ToolAdder.IsInMenu('D:\Projekte\DECGitMaster\Compiled\BIN_IDExx.x_Win32__Demos\Hash_FMX.exe',
+      CurrentDir := System.SysUtils.ExtractFileDir(ParamStr(0));
+      Path       := CurrentDir + '\SelectConfigForm.exe';
+
+      if ToolAdder.IsInMenu(Path,
                             IDEVersions[0].GetConfigKey) then
         WriteLn('Is in tools')
       else
-        WriteLn('Is not in tools');
+      begin
+        WriteLn('Is not in tools. Adding it.');
 
-//      ToolAdder.DeleteTool('D:\Projekte\DECGitMaster\Compiled\BIN_IDExx.x_Win32__Demos\Hash_FMX.exe', IDEVersions);
-
-      ToolAdder.AddTool('',
-                        'D:\Projekte\AddIDETool\Win32\Debug\SelectConfigForm.exe',
-                        'AddIDEToolTest',
-                        'D:\Projekte\AddIDETool\Win32\Debug',
-                        IDEVersions);
+        // Warning: the tool will be added to all found IDE versions, even if it
+        // might only be missing in the first one. That can lead to duplicates
+        // but this application here is a demo only!
+        ToolAdder.AddTool('',
+                          Path,
+                          'AddIDEToolTest',
+                          CurrentDir,
+                          IDEVersions);
+      end;
     finally
       ToolAdder.Free;
     end;
