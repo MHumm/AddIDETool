@@ -14,6 +14,8 @@
   specific language governing permissions and limitations
   under the License.
 *****************************************************************************}
+
+// Origin of this source file: https://github.com/MHumm/AddIDETool
 unit AddIDETool;
 
 interface
@@ -55,7 +57,12 @@ type
   /// <summary>
   ///   List of IDE configurations/versions
   /// </summary>
-  TIDEVersionList = TList<TIDEVersionRec>;
+  TIDEVersionList = class(TList<TIDEVersionRec>)
+    /// <summary>
+    ///   Get a ; delimited list of all config keys found on the system
+    /// </summary>
+    function GetIDEVersionsString: string;
+  end;
 
   /// <summary>
   ///   Class for adding something to or deleteing from the IDE's tools menu.
@@ -483,6 +490,18 @@ begin
     Exit('2005');
   if (BDSVersion = '2.0') then
     Exit('8.0 for .net');
+end;
+
+{ TIDEVersionList }
+
+function TIDEVersionList.GetIDEVersionsString: string;
+var
+  IDEVersion : TIDEVersionRec;
+begin
+  Result := '';
+
+  for IDEVersion in self do
+    Result := Result + IDEVersion.GetConfigKey + ';';
 end;
 
 end.
